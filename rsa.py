@@ -1,199 +1,93 @@
-# RSA Encryption
+import random
 
-import sys, random, pickle
+def encryptstr(message, e, n):
+    if len(message) > 128:
+        return -1
+    l = list(map(ord, message)) + [0 for i in range(0, 128-len(message))]
 
-'''
-def print_usage( command='' ):
-	if command == 'init':
-		print 'init <keys_filename> <prime_length>'
-	elif command == 'encrypt':
-		print 'encrypt <keys_filename> <plaintext_filename> <ciphertext_filename>'
-	elif command == 'decrypt':
-		print 'decrypt <keys_filename> <ciphertext_filename> <decrypted_filename>'
-	else:
-		print 'Usage:'
-		print '\tinit - rsa setup -> takes keys_filename and prime_length as inputs'
-		print '\tencrypt -> takes keys_filename, plaintext_filename, and ciphertext_filename as inputs'
-		print '\tdecrypt -> takes keys_filename, ciphertext_filename, and decrypted_filename as inputs '
-'''
+    M = 0
+    for i in range(0, 128):
+        M = (M << 8) + l[i]
 
-def miller_rabin_test( a, s, d, n ):
-	atop = pow( a, d, n )
-	if atop == 1:
-		return True
-	for i in xrange( s - 1 ):
-		if atop == n - 1:
-			return True
-		atop = ( atop * atop ) % n
-	return atop == n - 1
+    return expmod(M, e, n)
 
-def miller_rabin( n, confidence ):
-	d = n - 1
-	s = 0
-	while d % 2 == 0:
-		d >>= 1
-		s += 1
+def decryptstr(C, d, n):
+    M = expmod(C, d, n)
+    l = [0 for i in range(0, 128)]
+    for i in range(0, 128):
+        l[127 - i] = M & 255
+        M >>= 8
+    for i in range(0, 128): 
+        if l[127 - i] != 0:
+            l = l[0: -i]
+            break
 
-	for i in range( confidence ):
-		a = 0
-		while a == 0:
-			a = random.randrange( n )
-		if not miller_rabin_test( a, s, d, n ):
-			return False
-	return True
+    return "".join(list(map(chr, l)))
 
-def euclid_gcd( a, b ):
-	if a < b:
-		a, b = b, a
-	while b != 0:
-		a, b = b, a % b
-	return a
+def miller_rabin(n):
+    a = random.randint(2, n-2)
 
-def ext_euclid( a, b ):
-	if b == 0:
-		return 1, 0, a
-	else:
-		x, y, gcd = ext_euclid( b, a % b )
-		return y, x - y * ( a // b ), gcd
+    t = 0
+    d = n - 1
+    while d & 1 == 0:
+        d >>= 1
+        t += 1
 
-def inverse_mod( a, m ):
-	x, y, gcd = ext_euclid( a, m )
-	if gcd == 1:
-		return x % m
-	else:
-		return None
+    x = expmod(a, d, n)
+    for i in range(0, t):
+        y = x * x % n
+        if y == 1 and x != 1 and x != n-1:
+            return False
+        x = y
+    if x != 1:
+        return False
+    else:
+        return True
 
-## Class(es) ##
-class RSAKey( object ):
-	meta = dict( )
-	primality_confidence = 20
+def genkeys(keyLen=1024):
+    p = primeGenerate((keyLen>>1)+1)
+    q = primeGenerate((keyLen>>1)+1)
+    n = p*q
+    f = (p-1)*(q-1)
 
-	def gen_keys( self, filename, nbits ):
-		# generate p ( nbits-bit prime )
-		while 1:
-			p = random.getrandbits( nbits )
-			if miller_rabin( p, self.primality_confidence ):
-				self.meta.update( { 'p' : p } )
-				break
-		# generate q ( nbits-bit prime )
-		while 1:
-			q = random.getrandbits( nbits )
-			if miller_rabin( q, self.primality_confidence ):
-				self.meta.update( { 'q' : q } )
-				break
-		
-		# compute modulus: ( p * q )
-		modulus = long( self.meta[ 'p' ] * self.meta[ 'q' ] )
-		self.meta.update( { 'modulus' : modulus } )
+    d = e = 0
+    while True:
+        e = random.randint(2, f)
+        x, y, r = extendgcd(e, f)
+        if r == 1:
+            d = x if x > 0 else x + f
+            break
+    return d, e, n
 
-		# compute phi: ( ( p - 1 )( q - 1 ) )
-		phi = long( ( self.meta[ 'p' ] - 1 ) * ( self.meta[ 'q' ] - 1 ) )
-		self.meta.update( { 'phi' : phi } )
+def expmod(a, b, n):
+    ans = 1
+    while b:
+        if b & 1:
+            b -= 1
+            ans = ans * a % n
+        else:
+            b >>= 1
+            a = a * a % n
+    return ans
 
-		# choose e s.t 1 < e < phi and euclid_gcd( e, phi ) = 1
-		while 1:
-			while 1:
-				e = random.randrange( phi )
-				if e == 0: continue
-				if euclid_gcd( e, phi ) == 1:
-					self.meta.update( { 'e' : e } )
-					self.meta.update( { 'pub_key' : ( modulus, e ) } )
-					break
-		
-			# compute d:
-			d = long( inverse_mod( long( self.meta[ 'e' ] ), phi ) )
-			if d is None: continue
-			else:
-				self.meta.update( { 'd' : d } )
-				self.meta.update( { 'priv_key' : ( modulus, d ) } )
-				break
+def primeGenerate(len):
+    while True:
+        num = random.randint(1<<(len-1), 1<<len)
+        is_prime = True
+        if num == 2 or num == 3:
+            is_prime = True
+        elif num == 1 or num & 1 == 0:
+            is_prime = False
+        else:
+            for i in range(0, 10):
+                if miller_rabin(num) == False:
+                    is_prime = False
+                    break
+        if is_prime:
+            return num
 
-		self.dump( filename )
-
-	def encrypt( self, keys_fn, plaintext_fn, ciphertext_fn ):
-		self.load( keys_fn )
-		plaintext_handle = open( plaintext_fn, 'r' )
-		plaintext = plaintext_handle.read( )
-		plaintext_handle.close( )
-		pub_key = self.meta[ 'pub_key' ]
-		ciphertext = ''
-		for char in plaintext:
-			ciphertext += str( pow( ord( char ), pub_key[ 1 ], pub_key[ 0 ] ) ) + '\n'
-		ciphertext_handle = open( ciphertext_fn, 'w' )
-		ciphertext_handle.write( ciphertext )
-		ciphertext_handle.close( )
-		print 'Wrote encrypted data to: ' + ciphertext_fn
-
-	def decrypt( self, keys_fn, ciphertext_fn, decrypted_fn ):
-		self.load( keys_fn )
-		ciphertext_handle = open( ciphertext_fn, 'r' )
-		ciphertext = ciphertext_handle.read( ).split( )
-		priv_key = self.meta[ 'priv_key' ]
-		decrypted = ''
-		for chunk in ciphertext:
-			decrypted += chr( pow( long( chunk ), priv_key[ 1 ], priv_key[ 0 ] ) )
-		decrypted_handle = open( decrypted_fn, 'w' )
-		decrypted_handle.write( decrypted )
-		decrypted_handle.close( )
-		print 'Wrote decrypted data to: ' + decrypted_fn
-
-	def dump( self, filename ):
-		try:
-			handle = open( filename, 'w' )
-			pickle.dump( self.meta, handle )
-			handle.close( )
-			print 'Wrote generated keys to: ' + str( filename )
-		except BaseException as e:
-			print e
-	
-	def load( self, filename ):
-		try:
-			handle = open( filename, 'r' )
-			self.meta = dict( pickle.load( handle ) )
-			handle.close( )
-		except BaseException as e:
-			print e
-
-	def show_keys( self, keys_fn ):
-		try:
-			self.load( keys_fn )
-			print self.meta
-		except BaseException as e:
-			print e
-
-## Main ##
-if len( sys.argv ) > 1:
-	if str( sys.argv[ 1 ] ) == 'init':
-		if len( sys.argv ) != 4:
-			print 'Invalid number of inputs to init, expects 2, given ' + str( len( sys.argv ) - 2 )
-			print_usage( 'init' )
-		else:
-			keys = RSAKey( )
-			keys.gen_keys( str( sys.argv[ 2 ] ), int( sys.argv[ 3 ] ) )
-	elif str( sys.argv[ 1 ] ) == 'encrypt':
-		if len( sys.argv ) != 5:
-			print 'Invalid number of inputs to encrypt, expects 3, given ' + str( len( sys.argv ) - 2 )
-			print_usage( 'encrypt' )
-		else:
-			keys = RSAKey( )
-			keys.encrypt( str( sys.argv[ 2 ] ), str( sys.argv[ 3 ] ), str( sys.argv[ 4 ] ) )
-	elif str( sys.argv[ 1 ] ) == 'decrypt':
-		if len( sys.argv ) != 5:
-			print 'Invalid number of inputs to decrypt, expects 3, given ' + str( len( sys.argv ) - 2 )
-			print_usage( 'decrypt' )
-		else:
-			keys = RSAKey( )
-			keys.decrypt( str( sys.argv[ 2 ] ), str( sys.argv[ 3 ] ), str( sys.argv[ 4 ] ) )
-	elif str( sys.argv[ 1 ] ) == 'showkeys':
-		if len( sys.argv ) != 3:
-			print 'Invalid number of inputs to showkeys, expects 1, given ' + str( len( sys.argv ) - 2 )
-		else:
-			keys = RSAKey( )
-			keys.show_keys( str( sys.argv[ 2 ] ) )	
-	else:
-		print 'Unrecognized input: ' + str( sys.argv[ 1 ] )
-		print_usage( )
-		
-else:
-	print 'Invalid number of inputs'
-	print_usage( )
+def extendgcd(a, b):
+    if b == 0:
+        return 1, 0, a
+    x, y, r = extendgcd(b, a%b)
+    return y, x - (a//b)*y, r
