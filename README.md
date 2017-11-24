@@ -4,14 +4,14 @@ A simple implementation of communication with HTTP protocol, in which messages s
 
 Dependencies
 ------------
-'''
+```
 pip install flask requests
-'''
+```
 
 Usages
 ------
-'''
+```
 python ca.py
 python server.py
 python client.py
-'''
+```
