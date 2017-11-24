@@ -1,6 +1,6 @@
 # RSA Encrypted Communication with Certificate Authority
 
-A simple implementation of communication with HTTP protocol, in which messages sent from the client to the server are encryted and decrypted via RSA.
+A simple implementation of communication with HTTP protocol (using Flask framework), in which messages sent from the client to the server are encrypted and decrypted via RSA.
 
 Dependencies
 ------------
