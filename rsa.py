@@ -1,9 +1,9 @@
 import random
 
-def encryptstr(message, e, n):
-    if len(message) > 128:
+def encryptstr(msg, e, n):
+    if len(msg) > 128:
         return -1
-    l = list(map(ord, message)) + [0 for i in range(0, 128-len(message))]
+    l = list(map(ord, msg)) + [0 for i in range(0, 128-len(msg))]
 
     M = 0
     for i in range(0, 128):
@@ -44,9 +44,9 @@ def miller_rabin(n):
     else:
         return True
 
-def genkeys(keyLen=1024):
-    p = genprime((keyLen>>1)+1)
-    q = genprime((keyLen>>1)+1)
+def genkeys(keylen=1024):
+    p = genprime((keylen>>1)+1)
+    q = genprime((keylen>>1)+1)
     n = p*q
     f = (p-1)*(q-1)
 

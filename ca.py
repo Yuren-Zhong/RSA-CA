@@ -16,10 +16,7 @@ def register():
 
     md5 = hashlib.md5(content.encode('utf-8')).hexdigest()
 
-    reply = {
-        'Content': content,
-        'Signature': encryptstr(md5, private_key[0], private_key[1])
-    }
+    reply = encryptstr(md5, private_key[0], private_key[1])
     return json.dumps(reply)
 
 @ca.route('/check', methods = ['GET'])
