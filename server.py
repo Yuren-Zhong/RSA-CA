@@ -18,10 +18,11 @@ def index():
 
 @server.route('/msg', methods=['POST'])
 def msg():
-    encryptedMessage = request.form['message']
-    print(encryptedMessage)
-    decryptedMessage = decryptstr(int(encryptedMessage), private_key[0], private_key[1])
-    print(decryptedMessage)
-    return ""
+    emsg = request.form['message']
+    dmsg = decryptstr(int(emsg), private_key[0], private_key[1])
+    print(dmsg)
+    drpl = dmsg[::-1]
+    erpl = str(encryptstr(drpl, private_key[0], private_key[1]))
+    return erpl
 
 server.run('127.0.0.1', 9002)

@@ -20,7 +20,10 @@ if md5 == expectedmd5:
 
     message = input()
 
-    encryptedMessage = str(encryptstr(message, ca_content[0], ca_content[1]))
-    conn = requests.post("http://127.0.0.1:9002/msg", data={'message': encryptedMessage})
+    emsg = str(encryptstr(message, ca_content[0], ca_content[1]))
+    conn = requests.post("http://127.0.0.1:9002/msg", data={'message': emsg})
+    erpl = conn.text
+    drpl = decryptstr(int(erpl), ca_content[0], ca_content[1])
+    print(drpl)
 else:
     print("checking failed")

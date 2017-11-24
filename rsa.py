@@ -45,8 +45,8 @@ def miller_rabin(n):
         return True
 
 def genkeys(keyLen=1024):
-    p = primeGenerate((keyLen>>1)+1)
-    q = primeGenerate((keyLen>>1)+1)
+    p = genprime((keyLen>>1)+1)
+    q = genprime((keyLen>>1)+1)
     n = p*q
     f = (p-1)*(q-1)
 
@@ -70,7 +70,7 @@ def expmod(a, b, n):
             a = a * a % n
     return ans
 
-def primeGenerate(len):
+def genprime(len):
     while True:
         num = random.randint(1<<(len-1), 1<<len)
         is_prime = True
